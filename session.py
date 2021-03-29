@@ -28,3 +28,5 @@ class Session:
         user.token = token
         user.time_token = time
         self.session.commit()
+
+    def add_new_user(self, login, password):

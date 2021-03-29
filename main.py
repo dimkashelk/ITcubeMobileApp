@@ -34,7 +34,13 @@ def docs():
                                          "login": "string",
                                          "password": "string",
                                          "old_token": "string"
-                                     }}}), 200
+                                     }},
+                    "/api/add_user": {"methods": ["POST"],
+                                      "description": "method for add user",
+                                      "params": {
+                                          "login": "string",
+                                          "password": "string"
+                                      }}}), 200
 
 
 @app.route("/api", methods=["GET"])
@@ -77,11 +83,24 @@ def refresh():
                     "token": token})
 
 
+@app.route("/api/add_user", methods=["POST"])
+def add_user():
+    data = request.json
+    user = session.get_user_by_login(data['login'])
+    if user is not None:
+        return jsonify({"status": "login in database, please use another login"})
+    session.add_new_user(data['login'], get_hash_password(data['password']))
+    token = get_token(data['login'])
+    time = datetime.utcnow().isoformat()
+    session.set_token(data['login'], token, time)
+    return jsonify({"status": "ok",
+                    "token": token})
+
+
 @app.errorhandler(500)
 def error_500(e):
     return jsonify({"status": "server error, please check your request"}), 500
 
 
 if __name__ == '__main__':
-    print(get_token('1234'))
     app.run(port=5000)
