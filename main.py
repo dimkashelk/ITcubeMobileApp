@@ -52,7 +52,7 @@ def get_authorize_token():
         return jsonify({"status": "Error. Please use /api/refresh to refresh your token"}), 400
     if get_hash_password(data['password']) == user.password:
         time = datetime.utcnow().isoformat()
-        token = get_token()
+        token = get_token(user.login)
         session.set_token(data['login'], token, time)
     else:
         return jsonify({"status": "wrong password"}), 400
@@ -66,6 +66,15 @@ def refresh():
     user = session.get_user_by_login(data['login'])
     if user is None:
         return jsonify({"status": "user not found"}), 404
+    if user.token != data["old_token"]:
+        return jsonify({"status": "uncorrected old token"})
+    if get_hash_password(data['password']) != user.password:
+        return jsonify({"status": "uncorrected password"})
+    time = datetime.utcnow().isoformat()
+    token = get_token(user.login)
+    session.set_token(user.login, token, time)
+    return jsonify({"status": "ok",
+                    "token": token})
 
 
 @app.errorhandler(500)

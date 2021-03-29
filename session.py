@@ -28,6 +28,3 @@ class Session:
         user.token = token
         user.time_token = time
         self.session.commit()
-
-    def refresh_token(self, login, password, old_token):
-        user = self.get_user_by_login(login)
