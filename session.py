@@ -30,3 +30,8 @@ class Session:
         self.session.commit()
 
     def add_new_user(self, login, password):
+        user = users.User()
+        user.login = login
+        user.password = password
+        self.session.add(user)
+        self.session.commit()

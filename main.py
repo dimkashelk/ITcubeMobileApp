@@ -10,7 +10,7 @@ session = Session()
 
 
 def get_token(login):
-    return sha256(random.randbytes(256) + login.encode("utf-8")).hexdigest()
+    return sha256(random.randbytes(256) + str(login).encode("utf-8")).hexdigest()
 
 
 def get_hash_password(password):
@@ -40,6 +40,19 @@ def docs():
                                       "params": {
                                           "login": "string",
                                           "password": "string"
+                                      }},
+                    "/api/news": {"methods": ["GET"],
+                                  "description": "method for getting news",
+                                  "params": {
+                                      "token": "string"
+                                  }},
+                    "/api/send_msg": {"methods": ["PUT"],
+                                      "description": "method for send messange",
+                                      "params": {
+                                          "login": "string",
+                                          "token": "string",
+                                          "chat_id": "string",
+                                          "msg": "string"
                                       }}}), 200
 
 
@@ -54,12 +67,18 @@ def get_authorize_token():
     user = session.get_user_by_login(data['login'])
     if user is None:
         return jsonify({"status": "user not found"}), 404
-    if user.token != '':
+    time = datetime.fromisoformat(user.time_token)
+    if (datetime.utcnow() - time).seconds > 3600:
         return jsonify({"status": "Error. Please use /api/refresh to refresh your token"}), 400
     if get_hash_password(data['password']) == user.password:
         time = datetime.utcnow().isoformat()
         token = get_token(user.login)
-        session.set_token(data['login'], token, time)
+        while True:
+            try:
+                session.set_token(data['login'], token, time)
+                break
+            except BaseException:
+                pass
     else:
         return jsonify({"status": "wrong password"}), 400
     return jsonify({"status": "ok",
@@ -78,7 +97,12 @@ def refresh():
         return jsonify({"status": "uncorrected password"})
     time = datetime.utcnow().isoformat()
     token = get_token(user.login)
-    session.set_token(user.login, token, time)
+    while True:
+        try:
+            session.set_token(user.login, token, time)
+            break
+        except BaseException:
+            pass
     return jsonify({"status": "ok",
                     "token": token})
 
@@ -92,7 +116,12 @@ def add_user():
     session.add_new_user(data['login'], get_hash_password(data['password']))
     token = get_token(data['login'])
     time = datetime.utcnow().isoformat()
-    session.set_token(data['login'], token, time)
+    while True:
+        try:
+            session.set_token(data['login'], token, time)
+            break
+        except BaseException:
+            pass
     return jsonify({"status": "ok",
                     "token": token})
 
@@ -100,6 +129,22 @@ def add_user():
 @app.errorhandler(500)
 def error_500(e):
     return jsonify({"status": "server error, please check your request"}), 500
+
+
+@app.route('/api/news', methods=["GET"])
+def get_news():
+    return jsonify({"status": "ok",
+                    "news": "Try...."})
+
+
+@app.route('/api/send_msg', methods=["PUT"])
+def send_msg():
+    data = request.json
+    user = session.get_user_by_login(data['login'])
+    if user is None:
+        return jsonify({"status": "user not found"}), 404
+    if user.token != data["token"]:
+        return jsonify({"status": "uncorrected token"})
 
 
 if __name__ == '__main__':
